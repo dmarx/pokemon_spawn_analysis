@@ -130,7 +130,7 @@ if __name__ == '__main__':
         data = scan_file(fpath+fname, data)
     
     for k in data.keys():
-        with open(k+'.csv','w') as f:
+        with open(k+'.csv','w',newline='') as f:
             csv.writer(f).writerows(data[k])
         
                 

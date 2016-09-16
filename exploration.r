@@ -1,4 +1,5 @@
 #setwd('/media/Storage/Projects/pokemon_spawn_analysis/')
+#setwd('C:/Users/davidmarx/Documents/Projects/Toy Projects/pokemon_spawn_analysis')
 library(data.table)
 
 pokemon = fread('pokemon.csv')
