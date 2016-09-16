@@ -21,11 +21,19 @@ vals = pokemon_spawns[, .N, .(spawn_id, pokemon_id)]
 
 library(Matrix)
 m = vals[,sparseMatrix(i=spawn_id, j=pokemon_id, x=N)]
+m_dense = as.matrix(m)
 
 library(proxy)
-d = dist(as.matrix(m), method='cosine')
+d = dist(m_dense, method='cosine')
 image(as.matrix(d))
 clust = hclust(d)
 
 plot(clust) # not very informative
 image(as.matrix(d)[clust$order,clust$order])
+
+
+library(arules)
+
+rules = apriori(m_dense)
+inspect(rules[1:500])
+
