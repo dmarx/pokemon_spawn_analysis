@@ -53,7 +53,49 @@ pokemon_info = fread(paste0('data/raw/','pokemon_info.csv'))
 colnames(m_dense) = pokemon_info[1:149,english_name]
 
 dt_mat = as.DocumentTermMatrix(m_dense, weighting=weightTf)
-lda_mod = LDA(dt_mat, 15)
+lda_mod = LDA(dt_mat, 20)
+terms(lda_mod,10) # Again, looks like dratini clusters with water pokemon
 
-terms(lda_mod,10) # All of my topics are null :(
+-log(posterior(lda_mod)$terms)
 
+# Clustering in topic space
+topic_d = dist(t(posterior(lda_mod)$terms), method="cosine")
+topic_clust = hclust(topic_d)
+image(as.matrix(topic_d)[topic_clust$order,topic_clust$order]
+      #,xlab=pokemon_info[topic_clust$order, english_name]
+      )
+
+# Try to get some labels in there... needs work
+cbind(
+  seq(0,1, length.out=149),
+  pokemon_info[topic_clust$order, .(pokedex_number, english_name)]
+)[1:100]
+
+axis(1, at=seq(0,1, length.out=149), labels=pokemon_info[topic_clust$order, english_name])
+axis(2, at=seq(0,1, length.out=149), labels=pokemon_info[topic_clust$order, english_name])
+
+par(cex=0.5)
+#plot(as.dendrogram(topic_clust), horiz=TRUE)
+plot(topic_clust)
+
+# Let's visualize this as a graph
+hist(c(1-as.matrix(topic_d)))
+adj = 1-as.matrix(topic_d)
+thresh = .75
+adj[adj<thresh] = 0
+
+library(igraph)
+
+g = graph_from_adjacency_matrix(adj, mode="undirected", weighted=TRUE, diag=FALSE)
+
+lyt = layout_with_graphopt(g,charge=0.03)
+#lyt <- norm_coords(lyt, ymin=-.5, ymax=.5, xmin=-.5, xmax=.5)
+plot(g, layout=lyt, rescale=TRUE)
+
+# dump edgelist to plot with gephi
+el = as.data.table(get.edgelist(g))
+setnames(el, names(el), c('Source','Target'))
+
+el[,Weight:=E(g)$weight]
+
+write.csv(el, 'data/pokemon_edgelist_from_topics.csv')
