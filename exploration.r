@@ -19,6 +19,9 @@ pokemon_spawns = pokemon[spawn_ids]
 pokemon_spawns[,spawn_id:=.GRP, spawnpoint_id]
 vals = pokemon_spawns[, .N, .(spawn_id, pokemon_id)]
 
+pokemon_spawns[,.N,pokemon_id][order(pokemon_id)] # sanity checking that we have a diversity of mons across this subset of spawns
+
+
 library(Matrix)
 m = vals[,sparseMatrix(i=spawn_id, j=pokemon_id, x=N)]
 m_dense = as.matrix(m)
@@ -34,6 +37,7 @@ image(as.matrix(d)[clust$order,clust$order])
 
 library(arules)
 
-rules = apriori(m_dense)
-inspect(rules[1:500])
+# focus on dratini spawns
+rules = apriori(m_dense[m_dense[,147]==1,])
+inspect(rules[1:500]) # looks like dratini like water. Co-occur with psyduck and slowpoke.
 
