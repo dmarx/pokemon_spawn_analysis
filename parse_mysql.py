@@ -29,7 +29,8 @@ def yield_rows(f, delim=',', str_delim="'", row_container='()', term=';'):
                 firstchar=True
                 continue
             elif c == term:
-                return vals
+                yield vals
+                return
             else:
                 print('Expected delimiter, got: ' + c)
                 raise('foobar')
@@ -96,9 +97,8 @@ def find_insert_stmt(f, max_read=0):
         accum=''
     return f, False, None
         
-def scan_file(fname):
+def scan_file(fname, data = {}):
     with open(fname, 'r') as f:
-        data = {}
         while True:
             #f, insert_queued, tablename = find_insert_stmt(f, max_read=2000)
             f, insert_queued, tablename = find_insert_stmt(f)
@@ -121,8 +121,13 @@ def scan_file(fname):
     
 if __name__ == '__main__':
     import csv
-    fname = 'pokemon_db_dump'
-    data = scan_file(fname)
+    import os
+    #fname = 'pokemon_db_dump'
+    fpath = 'data/raw/extracted_db_dumps/'
+    data={}
+    _,_,filenames = os.walk(fpath).__next__()
+    for fname in filenames:
+        data = scan_file(fpath+fname, data)
     
     for k in data.keys():
         with open(k+'.csv','w') as f:
