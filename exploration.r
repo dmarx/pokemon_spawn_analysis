@@ -29,16 +29,31 @@ m_dense = as.matrix(m)
 
 library(proxy)
 d = dist(m_dense, method='cosine')
-image(as.matrix(d))
+#image(as.matrix(d))
 clust = hclust(d)
 
-plot(clust) # not very informative
+#plot(clust) # not very informative
 image(as.matrix(d)[clust$order,clust$order])
-
+# looks liek about 12 main clusters. Call it 15-20 to be safe.
 
 library(arules)
 
 # focus on dratini spawns
 rules = apriori(m_dense[m_dense[,147]==1,])
-inspect(rules[1:500]) # looks like dratini like water. Co-occur with psyduck and slowpoke.
+inspect(rules[1:500]) # looks like dratini like water. Co-occur with golduck and magikarp.
+
+# Use LDA to identify latent biomes as soft clusters
+library(topicmodels)
+library(tm)
+
+pokemon_info = fread(paste0('data/raw/','pokemon_info.csv'))
+
+# Should probably move this further up. It's necessary to get information on topics.
+# LDA apparently doesn't tolerate numeric (or rather, unspecified) terms.
+colnames(m_dense) = pokemon_info[1:149,english_name]
+
+dt_mat = as.DocumentTermMatrix(m_dense, weighting=weightTf)
+lda_mod = LDA(dt_mat, 15)
+
+terms(lda_mod,10) # All of my topics are null :(
 
