@@ -78,6 +78,35 @@ par(cex=0.5)
 #plot(as.dendrogram(topic_clust), horiz=TRUE)
 plot(topic_clust)
 
+# This looks fun
+install.packages("LDAvis")
+library(LDAvis)
+library(tsne)
+
+
+pokemon_topics_data = list(
+  phi   = posterior(lda_mod)$terms,
+  theta = posterior(lda_mod)$topics,
+  doc.length = rowSums(m_dense),
+  vocab = colnames(posterior(lda_mod)$terms),
+  term.frequency = colSums(m_dense)
+)
+
+json <- with(pokemon_topics_data, 
+             createJSON(phi = phi, 
+                        theta = theta, 
+                        vocab = vocab,
+                        doc.length = doc.length, 
+                        term.frequency = term.frequency
+                        #,mds.method = tsne
+                        #,mds.method = function(x) tsne(svd(x)$u)
+                        ))
+
+#install.packages('servr')
+serVis(json, out.dir = "vis", open.browser = TRUE)
+
+
+
 # Let's visualize this as a graph
 hist(c(1-as.matrix(topic_d)))
 adj = 1-as.matrix(topic_d)
