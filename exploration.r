@@ -2,9 +2,12 @@
 #setwd('C:/Users/davidmarx/Documents/Projects/Toy Projects/pokemon_spawn_analysis')
 library(data.table)
 
-source('code/read/read_mysql_csv_dumps.r')
+pokemon_info = fread(paste0('data/raw/','pokemon_info.csv'))
 
-spawn_ids = pokemon[,.N,spawnpoint_id][N>20, spawnpoint_id]
+#source('code/read/read_mysql_csv_dumps.r')
+source('code/read/read_canberra_data.r')
+
+spawn_ids = pokemon[,.N,spawnpoint_id][N>100, spawnpoint_id]
 setkey(pokemon, spawnpoint_id)
 pokemon_spawns = pokemon[spawn_ids]
 pokemon_spawns[,spawn_id:=.GRP, spawnpoint_id]
@@ -15,10 +18,16 @@ vals = pokemon_spawns[, .N, .(spawn_id, pokemon_id)]
 
 library(Matrix)
 m = vals[,sparseMatrix(i=spawn_id, j=pokemon_id, x=N)]
+colnames(m) = pokemon_info[1:149,english_name]
 m_dense = as.matrix(m)
 
+
+#######################################
+### Cluster spawns in pokemon space ###
+#######################################
+
 library(proxy)
-d = dist(m_dense, method='cosine')
+system.time(d <- dist(m_dense, method='cosine'))
 #image(as.matrix(d))
 clust = hclust(d)
 
@@ -26,24 +35,39 @@ clust = hclust(d)
 image(as.matrix(d)[clust$order,clust$order])
 # looks liek about 12 main clusters. Call it 15-20 to be safe.
 
-library(arules)
 
+########################################################
+### Find correlations between pokemon w/ assoc rules ###
+########################################################
+
+library(arules)
+m_binary = copy(m_dense)
+m_binary[m_binary>0] = 1
+names(m_binary) = NULL
+system.time(rules <- apriori(as.matrix(m_binary)))
 # focus on dratini spawns
-rules = apriori(m_dense[m_dense[,147]==1,])
+#system.time(rules <- apriori(m_dense[m_dense[,147]==1,]))
 inspect(rules[1:500]) # looks like dratini like water. Co-occur with golduck and magikarp.
 
-# Use LDA to identify latent biomes as soft clusters
+##########################################################
+### Use LDA to identify latent biomes as soft clusters ###
+##########################################################
+#install.packages('slam') # My old OS can't handle new R :(
+
+#require(devtools)
+#install_version("slam", 
+#                version = "0.1-35", repos = "http://cran.us.r-project.org")
+#install.packages('tm')
+#install.packages('topicmodels')
 library(topicmodels)
 library(tm)
 
-pokemon_info = fread(paste0('data/raw/','pokemon_info.csv'))
+dt_mat = as.DocumentTermMatrix(m, weighting=weightTf)
+system.time(lda_mod <- LDA(dt_mat, 15)) # just 26min!!
 
-# Should probably move this further up. It's necessary to get information on topics.
-# LDA apparently doesn't tolerate numeric (or rather, unspecified) terms.
-colnames(m_dense) = pokemon_info[1:149,english_name]
 
-dt_mat = as.DocumentTermMatrix(m_dense, weighting=weightTf)
-lda_mod = LDA(dt_mat, 20)
+save(lda_mod, file="data/rdata/lda_mod.rdata")
+
 terms(lda_mod,10) # Again, looks like dratini clusters with water pokemon
 
 -log(posterior(lda_mod)$terms)
@@ -69,9 +93,9 @@ par(cex=0.5)
 plot(topic_clust)
 
 # This looks fun
-install.packages("LDAvis")
+#install.packages("LDAvis")
 library(LDAvis)
-library(tsne)
+#library(tsne)
 
 
 pokemon_topics_data = list(
